@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2019-present Open Networking Foundation <info@opennetworking.org>
 #
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2024 Kyunghee University
 
 SHELL = bash -e -o pipefail
 
@@ -9,7 +10,8 @@ export GO111MODULE=on
 
 .PHONY: build
 
-ONOS_CONFIG_VERSION ?= latest
+TARGET := onos-config
+DOCKER_TAG ?= latest
 
 build-tools:=$(shell if [ ! -d "./build/build-tools" ]; then cd build && git clone https://github.com/onosproject/build-tools.git; fi)
 include ./build/build-tools/make/onf-common.mk
@@ -27,15 +29,15 @@ local-deps: local-helmit local-onos-api local-onos-lib-go local-onos-ric-sdk-go 
 
 build: # @HELP build the Go binaries and run all validations (default)
 build: mod-update local-deps
-	go build -mod=vendor -o build/_output/onos-config ./cmd/onos-config
+	go build -mod=vendor -o build/_output/${TARGET} ./cmd/${TARGET}
 
 test: # @HELP run the unit tests and source code validation producing a golang style report
 test: mod-lint build linters license
-	go test -race github.com/onosproject/onos-config/...
+	go test -race github.com/onosproject/${TARGET}/...
 
 jenkins-test: # @HELP run the unit tests and source code validation producing a junit style report for Jenkins
 jenkins-test: mod-lint build linters license
-	TEST_PACKAGES=github.com/onosproject/onos-config/... ./build/build-tools/build/jenkins/make-unit
+	TEST_PACKAGES=github.com/onosproject/${TARGET}/... ./build/build-tools/build/jenkins/make-unit
 
 helmit-config: integration-test-namespace # @HELP run helmit gnmi tests locally
 	make helmit-config -C test
@@ -45,12 +47,15 @@ helmit-rbac: integration-test-namespace # @HELP run helmit gnmi tests locally
 
 integration-tests: helmit-config helmit-rbac # @HELP run helmit integration tests locally
 
-onos-config-docker: mod-update local-deps # @HELP build onos-config base Docker image
-	docker build --platform linux/amd64 . -f build/onos-config/Dockerfile \
-		-t ${DOCKER_REPOSITORY}onos-config:${ONOS_CONFIG_VERSION}
+docke-build: mod-update local-deps # @HELP build onos-config base Docker image
+	docker build --platform linux/amd64 . -f build/${TARGET}/Dockerfile \
+		-t ${DOCKER_REPOSITORY}${TARGET}:${DOCKER_TAG}
 
 images: # @HELP build all Docker images
-images: onos-config-docker
+images: build docke-build
+
+docker-push:
+	docker push ${DOCKER_REPOSITORY}${TARGET}:${DOCKER_TAG}
 
 kind: # @HELP build Docker images and add them to the currently configured kind cluster
 kind: images kind-only
@@ -58,12 +63,12 @@ kind: images kind-only
 kind-only: # @HELP deploy the image without rebuilding first
 kind-only:
 	@if [ "`kind get clusters`" = '' ]; then echo "no kind cluster found" && exit 1; fi
-	kind load docker-image --name ${KIND_CLUSTER_NAME} ${DOCKER_REPOSITORY}onos-config:${ONOS_CONFIG_VERSION}
+	kind load docker-image --name ${KIND_CLUSTER_NAME} ${DOCKER_REPOSITORY}${TARGET}:${ONOS_CONFIG_VERSION}
 
 all: build images
 
 publish: # @HELP publish version on github and dockerhub
-	./build/build-tools/publish-version ${VERSION} onosproject/onos-config
+	./build/build-tools/publish-version ${VERSION} ${DOCKER_REPOSITORY}${TARGET}
 
 jenkins-publish: jenkins-tools # @HELP Jenkins calls this to publish artifacts
 	./build/bin/push-images
@@ -71,8 +76,8 @@ jenkins-publish: jenkins-tools # @HELP Jenkins calls this to publish artifacts
 	./build/build-tools/build/docs/push-docs
 
 clean:: # @HELP remove all the build artifacts
-	rm -rf ./build/_output ./vendor ./cmd/onos-config/onos-config ./cmd/onos/onos
-	go clean -testcache github.com/onosproject/onos-config/...
+	rm -rf ./build/_output ./vendor ./cmd/${TARGET}/${TARGET} ./cmd/onos/onos
+	go clean -testcache github.com/onosproject/${TARGET}/...
 
 local-helmit: # @HELP Copies a local version of the helmit dependency into the vendor directory
 ifdef LOCAL_HELMIT
