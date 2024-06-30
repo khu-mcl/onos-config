@@ -16,4 +16,4 @@ ONOS Configuration subsystem built using the µONOS architecture
 You can find all the documentation under [docs](docs) directory. 
 A good place to start is the [README](docs/README.md). 
 
-Overall µONOS documentation is also published on its own [website](https://docs.onosproject.org).
+Overall µONOS documentation is also published on its own [website](https://docs.onosproject.org). 
