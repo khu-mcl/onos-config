@@ -29,11 +29,11 @@ local-deps: local-helmit local-onos-api local-onos-lib-go local-onos-ric-sdk-go 
 
 build: # @HELP build the Go binaries and run all validations (default)
 build: mod-update local-deps
-	go build -mod=vendor -o build/_output/${TARGET} ./cmd/${TARGET}
+          go build -mod=vendor -o build/_output/${TARGET} ./cmd/${TARGET}
 
 test: # @HELP run the unit tests and source code validation producing a golang style report
 test: mod-lint build linters license
-	go test -race github.com/onosproject/${TARGET}/...
+	go test -race github.com/onosproject/onos-config/...
 
 jenkins-test: # @HELP run the unit tests and source code validation producing a junit style report for Jenkins
 jenkins-test: mod-lint build linters license
@@ -47,12 +47,12 @@ helmit-rbac: integration-test-namespace # @HELP run helmit gnmi tests locally
 
 integration-tests: helmit-config helmit-rbac # @HELP run helmit integration tests locally
 
-docke-build: mod-update local-deps # @HELP build onos-config base Docker image
+docker-build: mod-update local-deps # @HELP build onos-config base Docker image
 	docker build --platform linux/amd64 . -f build/${TARGET}/Dockerfile \
 		-t ${DOCKER_REPOSITORY}${TARGET}:${DOCKER_TAG}
 
 images: # @HELP build all Docker images
-images: build docke-build
+images: build docker-build
 
 docker-push:
 	docker push ${DOCKER_REPOSITORY}${TARGET}:${DOCKER_TAG}
