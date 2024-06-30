@@ -29,7 +29,7 @@ local-deps: local-helmit local-onos-api local-onos-lib-go local-onos-ric-sdk-go 
 
 build: # @HELP build the Go binaries and run all validations (default)
 build: mod-update local-deps
-          go build -mod=vendor -o build/_output/${TARGET} ./cmd/${TARGET}
+	go build -mod=vendor -o build/_output/${TARGET} ./cmd/${TARGET}
 
 test: # @HELP run the unit tests and source code validation producing a golang style report
 test: mod-lint build linters license
